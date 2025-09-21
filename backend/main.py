@@ -79,10 +79,6 @@ def update_vehicle_location(vehicle_id: str, lat: Optional[float], lng: Optional
         return
     last_known_locations[vehicle_id] = {"lat": lat, "lng": lng}
 
-    if lat is None or lng is None:
-        return
-    last_known_locations[vehicle_id] = {"lat": lat, "lng": lng}
-
 
 async def broadcast_alert(payload: dict):
     stale: List[WebSocket] = []
@@ -159,16 +155,11 @@ class EscalationPayload(BaseModel):
 
 
 # ------------------------------
-# Health & Root
+# Health Endpoint
 # ------------------------------
 @app.get("/health")
 def health():
     return {"status": "ok", "clients": len(dashboard_clients), "alerts": len(alerts_log)}
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Raksha AI backend is running.", "version": app.version}
 
 
 # ------------------------------
@@ -380,6 +371,7 @@ async def simulate_burst(count: int = 5):
 if os.path.isdir("build"):
     app.mount("/static", StaticFiles(directory="build/static"), name="static")
 
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
+    @app.get("/", include_in_schema=False)
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str = ""):
         return FileResponse(os.path.join("build", "index.html"))
