@@ -369,8 +369,13 @@ async def simulate_burst(count: int = 5):
 # Serve React build (NEW BLOCK)
 # ------------------------------
 if os.path.isdir("build"):
+    # Serve static assets (CSS/JS)
     app.mount("/static", StaticFiles(directory="build/static"), name="static")
 
+    # Serve other public files (logo, manifest, favicon, etc.)
+    app.mount("/assets", StaticFiles(directory="build"), name="assets")
+
+    # Catch-all: return index.html
     @app.get("/", include_in_schema=False)
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_frontend(full_path: str = ""):
