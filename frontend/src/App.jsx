@@ -102,7 +102,8 @@ function App() {
   // API handlers
   const sendPanic = async () => {
     try {
-      await api.sendPanic(panicData);
+      const payload = { ...panicData, user_id: (panicData.user_id || "").trim() || "Unknown User" };
+      await api.sendPanic(payload);
       alert("Panic alert sent!");
     } catch (e) {
       alert("Error sending panic alert");
@@ -283,7 +284,7 @@ function App() {
               <button
                 onClick={sendPanic}
                 className="btn-panic"
-                disabled={!panicData.user_id.trim()}
+                disabled={false}
               >
                 Panic Trigger
               </button>

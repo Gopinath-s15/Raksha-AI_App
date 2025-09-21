@@ -216,6 +216,8 @@ html, body { scroll-behavior: smooth; }
 .App-logo { height: 40vmin; pointer-events: none; }
 @keyframes App-logo-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+/*
+
 /* Enhanced Buttons — gradients, glow, shimmer, accessibility */
 .btn-primary, .btn-glow, .btn-ghost, .btn-panic {
   position: relative;
