@@ -1,38 +1,298 @@
-.App {
-  text-align: center;
+/*
+  Raksha AI – Modern UI Theme & Animations
+  - Brand tokens
+  - Glassmorphism cards
+  - Animated panic/radar effects
+  - Smooth entrances and micro-interactions
+*/
+
+:root {
+  --raksha-pink-50: #fff1f5;
+  --raksha-pink-100: #ffe4ec;
+  --raksha-pink-500: #ec4899;
+  --raksha-pink-600: #db2777;
+  --raksha-pink-700: #be185d;
+  --raksha-red-500: #ef4444;
+  --raksha-red-600: #dc2626;
+  --raksha-red-700: #b91c1c;
+  --raksha-purple-500: #8b5cf6;
+  --raksha-indigo-600: #4f46e5;
+  --raksha-green-600: #16a34a;
+  --text-ink: #0f172a;
+  --text-muted: #475569;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-stroke: rgba(255, 255, 255, 0.35);
+  --shadow-lg: 0 10px 25px rgba(2, 6, 23, 0.15);
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* Base refinements */
+* { -webkit-tap-highlight-color: transparent; }
+html, body { scroll-behavior: smooth; }
+
+/* Glassmorphism card */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-stroke);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+/* Elevated hover effect */
+.hover-lift {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.18);
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Focus ring for better accessibility */
+.focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.0);
+  transition: box-shadow 180ms ease;
+}
+.focus-ring:focus {
+  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.25);
+}
+
+/* Primary button */
+.btn-primary {
+  position: relative;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 14px;
   color: white;
+  background: linear-gradient(135deg, var(--raksha-purple-500), var(--raksha-indigo-600));
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+.btn-primary:hover { transform: translateY(-1px); filter: brightness(1.03); }
+.btn-primary:active { transform: translateY(0); filter: brightness(0.98); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* PANIC button – prominent, glowing, pulsing */
+.btn-panic {
+  --bg1: var(--raksha-red-600);
+  --bg2: var(--raksha-pink-600);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 22px;
+  border-radius: 16px;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  box-shadow: 0 14px 30px rgba(220, 38, 38, 0.35), inset 0 -2px 8px rgba(0,0,0,0.15);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  animation: pulseGlow 2.2s ease-in-out infinite;
+}
+.btn-panic:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 18px 38px rgba(220, 38, 38, 0.42), inset 0 -2px 8px rgba(0,0,0,0.15);
+}
+.btn-panic:active { transform: translateY(0); filter: brightness(0.98); }
+
+/* Subtle shimmer overlay on hover */
+.btn-panic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.18) 35%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 600ms ease;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.btn-panic:hover::after { transform: translateX(100%); }
+
+/* Radar container for rings around elements (e.g., panic area) */
+.radar {
+  position: relative;
+  isolation: isolate; /* allow contained z-index layering */
+}
+.radar .ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 24px;
+  border: 2px solid rgba(236, 72, 153, 0.25);
+  animation: ring 2.4s ease-out infinite;
+  z-index: -1;
+}
+.radar .ring:nth-child(1) { animation-delay: 0s; }
+.radar .ring:nth-child(2) { animation-delay: 0.6s; }
+.radar .ring:nth-child(3) { animation-delay: 1.2s; }
+
+/* Badges/Chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--raksha-pink-100);
+  color: var(--raksha-pink-700);
 }
 
-.App-link {
-  color: #61dafb;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255,255,255,0.7);
+  color: var(--text-ink);
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.chip:hover { transform: translateY(-1px); background: rgba(255,255,255,0.9); box-shadow: 0 6px 16px rgba(2, 6, 23, 0.08); }
+.chip.active { border-color: var(--raksha-pink-500); box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2); color: var(--raksha-pink-700); }
+
+/* Animated background accent (optional) */
+.animated-bg {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(60% 60% at 20% 20%, rgba(244, 114, 182, 0.15) 0%, transparent 60%),
+              radial-gradient(50% 50% at 80% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 60%),
+              radial-gradient(40% 40% at 50% 80%, rgba(99, 102, 241, 0.12) 0%, transparent 60%);
+  filter: blur(40px);
+  animation: floatY 12s ease-in-out infinite;
+  z-index: 0;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 14px 30px rgba(220, 38, 38, 0.35), inset 0 -2px 8px rgba(0,0,0,0.15); }
+  50% { box-shadow: 0 18px 40px rgba(236, 72, 153, 0.45), inset 0 -2px 8px rgba(0,0,0,0.15); }
+}
+@keyframes ring {
+  0% { transform: scale(0.95); opacity: 0.55; }
+  70% { transform: scale(1.15); opacity: 0.12; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Animation helpers */
+.animate-fadeInUp { animation: fadeInUp 0.7s ease both; }
+.animate-float { animation: floatY 8s ease-in-out infinite; }
+.animate-pulseGlow { animation: pulseGlow 2.4s ease-in-out infinite; }
+
+/* Utility for shimmer placeholders */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.75) 25%, rgba(241, 245, 249, 0.75) 37%, rgba(226, 232, 240, 0.75) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 10px;
+}
+
+/* Legacy CRA logo spin kept for compatibility if used anywhere */
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo { animation: App-logo-spin infinite 20s linear; }
+}
+.App-logo { height: 40vmin; pointer-events: none; }
+@keyframes App-logo-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Enhanced Buttons — gradients, glow, shimmer, accessibility */
+.btn-primary, .btn-glow, .btn-ghost, .btn-panic {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+.btn-primary:disabled, .btn-glow:disabled, .btn-ghost:disabled, .btn-panic:disabled { opacity: .55; cursor: not-allowed; }
+.btn-primary:active, .btn-glow:active, .btn-ghost:active, .btn-panic:active { transform: translateY(1px); }
+.btn-primary:focus-visible, .btn-glow:focus-visible, .btn-ghost:focus-visible, .btn-panic:focus-visible { box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.25); }
+
+/* Glow: vibrant gradient with animated shine */
+.btn-glow {
+  color: #fff;
+  background: linear-gradient(135deg, #ef5da8, #8b5cf6 45%, #4f46e5);
+  box-shadow: 0 12px 26px rgba(79, 70, 229, 0.35), 0 2px 0 rgba(255,255,255,0.12) inset;
+}
+.btn-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.25) 35%, transparent 70%);
+  transform: translateX(-130%);
+  transition: transform 640ms ease;
+  pointer-events: none;
+}
+.btn-glow:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 14px 32px rgba(79, 70, 229, 0.45); }
+.btn-glow:hover::after { transform: translateX(130%); }
+
+/* Primary: cooler gradient distinct from glow */
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.35), 0 2px 0 rgba(255,255,255,0.12) inset;
+}
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.2) 40%, transparent 75%);
+  transform: translateX(-120%);
+  transition: transform 600ms ease;
+  pointer-events: none;
+}
+.btn-primary:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: 0 14px 32px rgba(37, 99, 235, 0.45); }
+.btn-primary:hover::after { transform: translateX(120%); }
+
+/* Ghost: glassy with subtle border + hover lift */
+.btn-ghost {
+  color: #0f172a;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(236, 72, 153, 0.35);
+  box-shadow: 0 8px 20px rgba(2,6,23,0.06);
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 10px 24px rgba(2,6,23,0.12);
+}
+
+/* Panic: stronger, pulsing, brighter hover */
+.btn-panic {
+  --bg1: #ef4444;
+  --bg2: #f43f5e;
+  color: #fff;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  box-shadow: 0 18px 36px rgba(244, 63, 94, 0.45), inset 0 -2px 8px rgba(0,0,0,0.15);
+  animation: pulseGlow 2.1s ease-in-out infinite;
+}
+.btn-panic:hover { filter: brightness(1.06); box-shadow: 0 22px 44px rgba(244, 63, 94, 0.55), inset 0 -2px 10px rgba(0,0,0,0.15); }
