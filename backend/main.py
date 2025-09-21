@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 from datetime import datetime
@@ -8,6 +9,7 @@ import asyncio
 import uuid
 import math
 import random
+import os
 
 app = FastAPI(
     title="Raksha AI Backend",
@@ -51,7 +53,6 @@ GEOCODE = {
 # ------------------------------
 # Helpers
 # ------------------------------
-
 def clamp_log():
     while len(alerts_log) > MAX_ALERTS:
         alerts_log.pop(0)
@@ -74,6 +75,10 @@ def generate_alert_message(language: str, location: Any, vehicle_id: str, reason
 
 
 def update_vehicle_location(vehicle_id: str, lat: Optional[float], lng: Optional[float]):
+    if lat is None or lng is None:
+        return
+    last_known_locations[vehicle_id] = {"lat": lat, "lng": lng}
+
     if lat is None or lng is None:
         return
     last_known_locations[vehicle_id] = {"lat": lat, "lng": lng}
@@ -101,7 +106,6 @@ def nearest_poi(lat: float, lng: float) -> Dict[str, Any]:
 
 
 def compute_risk(lat: float, lng: float, base: Optional[str] = None, anomaly: Optional[str] = None) -> str:
-    # Simple deterministic demo using location + time + anomaly for variety
     hour = datetime.now().hour
     score = 0
     score += (abs(lat) + abs(lng)) % 3
@@ -122,7 +126,6 @@ def compute_risk(lat: float, lng: float, base: Optional[str] = None, anomaly: Op
 
 
 def make_safe_route(lat: float, lng: float) -> List[Dict[str, float]]:
-    # Generate small jittered points forming a tiny path
     route = []
     for i in range(4):
         route.append({"lat": lat + 0.0003 * i + random.uniform(-0.0001, 0.0001),
@@ -137,7 +140,7 @@ class PanicPayload(BaseModel):
     user_id: Optional[str] = "Unknown User"
     vehicle_id: Optional[str] = "Bus #17"
     lang: Optional[str] = "en"
-    location: Optional[Any] = "Unknown"  # string or {lat,lng}
+    location: Optional[Any] = "Unknown"
 
 
 class AnomalyPayload(BaseModel):
@@ -173,35 +176,31 @@ def read_root():
 # ------------------------------
 @app.post("/panic")
 async def panic_event(payload: PanicPayload):
-    try:
-        user_id = payload.user_id or "Unknown User"
-        vehicle_id = payload.vehicle_id or "Unknown Vehicle"
-        language = payload.lang or "en"
-        location = payload.location or "Unknown"
+    user_id = payload.user_id or "Unknown User"
+    vehicle_id = payload.vehicle_id or "Unknown Vehicle"
+    language = payload.lang or "en"
+    location = payload.location or "Unknown"
 
-        if isinstance(location, str) and location in GEOCODE:
-            location = GEOCODE[location]
-        if isinstance(location, dict):
-            update_vehicle_location(vehicle_id, location.get("lat"), location.get("lng"))
+    if isinstance(location, str) and location in GEOCODE:
+        location = GEOCODE[location]
+    if isinstance(location, dict):
+        update_vehicle_location(vehicle_id, location.get("lat"), location.get("lng"))
 
-        alert_msg = generate_alert_message(language, location, vehicle_id, "Distress Detected")
-        alert = {
-            "type": "panic",
-            "id": f"ALERT-{uuid.uuid4().hex[:6].upper()}",
-            "user_id": user_id,
-            "location": location,
-            "vehicle_id": vehicle_id,
-            "message": alert_msg,
-            "ts": datetime.utcnow().isoformat() + "Z",
-        }
+    alert_msg = generate_alert_message(language, location, vehicle_id, "Distress Detected")
+    alert = {
+        "type": "panic",
+        "id": f"ALERT-{uuid.uuid4().hex[:6].upper()}",
+        "user_id": user_id,
+        "location": location,
+        "vehicle_id": vehicle_id,
+        "message": alert_msg,
+        "ts": datetime.utcnow().isoformat() + "Z",
+    }
 
-        alerts_log.append(alert)
-        clamp_log()
-        await broadcast_alert(alert)
-        return JSONResponse({"status": "alert sent", "alert": alert})
-    except Exception as e:
-        print(f"Error in /panic: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+    alerts_log.append(alert)
+    clamp_log()
+    await broadcast_alert(alert)
+    return JSONResponse({"status": "alert sent", "alert": alert})
 
 
 # ------------------------------
@@ -209,36 +208,32 @@ async def panic_event(payload: PanicPayload):
 # ------------------------------
 @app.post("/anomaly")
 async def anomaly_event(payload: AnomalyPayload):
-    try:
-        anomaly_type = payload.anomaly_type or "route_deviation"
-        location = payload.current_location or "Unknown"
-        vehicle_id = payload.vehicle_id or "Bus #17"
-        language = payload.lang or "en"
+    anomaly_type = payload.anomaly_type or "route_deviation"
+    location = payload.current_location or "Unknown"
+    vehicle_id = payload.vehicle_id or "Bus #17"
+    language = payload.lang or "en"
 
-        if isinstance(location, str) and location in GEOCODE:
-            location = GEOCODE[location]
-        if isinstance(location, dict):
-            update_vehicle_location(vehicle_id, location.get("lat"), location.get("lng"))
+    if isinstance(location, str) and location in GEOCODE:
+        location = GEOCODE[location]
+    if isinstance(location, dict):
+        update_vehicle_location(vehicle_id, location.get("lat"), location.get("lng"))
 
-        reason = anomaly_type.replace("_", " ").title()
-        alert_msg = generate_alert_message(language, location, vehicle_id, reason)
-        alert = {
-            "type": "anomaly",
-            "id": f"ALERT-{uuid.uuid4().hex[:6].upper()}",
-            "anomaly_type": anomaly_type,
-            "location": location,
-            "vehicle_id": vehicle_id,
-            "message": alert_msg,
-            "ts": datetime.utcnow().isoformat() + "Z",
-        }
+    reason = anomaly_type.replace("_", " ").title()
+    alert_msg = generate_alert_message(language, location, vehicle_id, reason)
+    alert = {
+        "type": "anomaly",
+        "id": f"ALERT-{uuid.uuid4().hex[:6].upper()}",
+        "anomaly_type": anomaly_type,
+        "location": location,
+        "vehicle_id": vehicle_id,
+        "message": alert_msg,
+        "ts": datetime.utcnow().isoformat() + "Z",
+    }
 
-        alerts_log.append(alert)
-        clamp_log()
-        await broadcast_alert(alert)
-        return JSONResponse({"status": "anomaly alert sent", "alert": alert})
-    except Exception as e:
-        print(f"Error in /anomaly: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+    alerts_log.append(alert)
+    clamp_log()
+    await broadcast_alert(alert)
+    return JSONResponse({"status": "anomaly alert sent", "alert": alert})
 
 
 # ------------------------------
@@ -246,38 +241,34 @@ async def anomaly_event(payload: AnomalyPayload):
 # ------------------------------
 @app.post("/escalate")
 async def escalate_event(payload: EscalationPayload):
-    try:
-        anomaly_type = payload.anomaly_type
-        contacts = payload.contacts or []
-        vehicle_id = payload.vehicle_id or "Unknown Vehicle"
-        escalation_level = payload.escalation_level or "family"
+    anomaly_type = payload.anomaly_type
+    contacts = payload.contacts or []
+    vehicle_id = payload.vehicle_id or "Unknown Vehicle"
+    escalation_level = payload.escalation_level or "family"
 
-        mapping = {
-            "distress_voice": ["family", "fleet", "police"],
-            "route_deviation": ["family", "fleet"],
-            "unsafe_driving": ["fleet"],
+    mapping = {
+        "distress_voice": ["family", "fleet", "police"],
+        "route_deviation": ["family", "fleet"],
+        "unsafe_driving": ["fleet"],
+    }
+    to_notify_levels = mapping.get(anomaly_type, ["family"])
+    notified_contacts = [c for c in contacts]
+
+    alert_id = f"ALERT-{uuid.uuid4().hex[:6].upper()}"
+    print(f"Escalation Alert Sent to {notified_contacts} for {vehicle_id} at level {escalation_level}")
+
+    return JSONResponse(
+        {
+            "status": "escalation_sent",
+            "alert_id": alert_id,
+            "levels": to_notify_levels,
+            "notified": notified_contacts,
         }
-        to_notify_levels = mapping.get(anomaly_type, ["family"])  # demo
-        notified_contacts = [c for c in contacts]
-
-        alert_id = f"ALERT-{uuid.uuid4().hex[:6].upper()}"
-        print(f"Escalation Alert Sent to {notified_contacts} for {vehicle_id} at level {escalation_level}")
-
-        return JSONResponse(
-            {
-                "status": "escalation_sent",
-                "alert_id": alert_id,
-                "levels": to_notify_levels,
-                "notified": notified_contacts,
-            }
-        )
-    except Exception as e:
-        print(f"Error in /escalate: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+    )
 
 
 # ------------------------------
-# AI Explanation Endpoint (contextual)
+# AI Explanation Endpoint
 # ------------------------------
 @app.get("/explanation")
 async def explanation(reason: str = "distress_voice", vehicle_id: Optional[str] = None):
@@ -297,11 +288,10 @@ async def explanation(reason: str = "distress_voice", vehicle_id: Optional[str] 
 
 
 # ------------------------------
-# Personalized Safety Guidance (dynamic)
+# Personalized Safety Guidance
 # ------------------------------
 @app.get("/guidance")
 async def guidance(location: Optional[str] = None, risk: Optional[str] = None, lat: Optional[float] = None, lng: Optional[float] = None, vehicle_id: Optional[str] = None):
-    # Resolve coordinates
     coord = None
     if lat is not None and lng is not None:
         coord = {"lat": lat, "lng": lng}
@@ -311,15 +301,12 @@ async def guidance(location: Optional[str] = None, risk: Optional[str] = None, l
         coord = last_known_locations[vehicle_id]
 
     if coord is None:
-        # default to Metro Station XYZ if nothing known
         coord = GEOCODE["Metro Station XYZ"]
 
-    # Compute risk if not provided
     risk_level = risk
     if risk_level not in ("low", "medium", "high"):
         risk_level = compute_risk(coord["lat"], coord["lng"], base=risk, anomaly=None)
 
-    # Choose guidance
     if risk_level == "high":
         action = "contact_police"
         guidance_text = "High risk detected. Move to the nearest office/security and call the police immediately. Share live location."
@@ -344,7 +331,7 @@ async def guidance(location: Optional[str] = None, risk: Optional[str] = None, l
 
 
 # ------------------------------
-# Recent Alerts (for judges/UI fallback)
+# Recent Alerts
 # ------------------------------
 @app.get("/alerts/recent")
 async def recent_alerts(limit: int = 20):
@@ -353,7 +340,7 @@ async def recent_alerts(limit: int = 20):
 
 
 # ------------------------------
-# WebSocket Endpoint for Live Dashboard
+# WebSocket Endpoint
 # ------------------------------
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -370,7 +357,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # ------------------------------
-# Simulation Utilities (for demo/judges)
+# Simulation Utilities
 # ------------------------------
 @app.post("/simulate/panic")
 async def simulate_panic():
@@ -380,9 +367,19 @@ async def simulate_panic():
 
 @app.post("/simulate/burst")
 async def simulate_burst(count: int = 5):
-    # Generate a burst of mixed alerts
     for i in range(max(1, min(20, count))):
         await anomaly_event(AnomalyPayload(anomaly_type=random.choice(["route_deviation", "unsafe_driving", "distress_voice"]),
                                            vehicle_id="Bus #17",
                                            current_location=GEOCODE["Metro Station XYZ"]))
     return {"status": "ok", "generated": count}
+
+
+# ------------------------------
+# Serve React build (NEW BLOCK)
+# ------------------------------
+if os.path.isdir("build"):
+    app.mount("/static", StaticFiles(directory="build/static"), name="static")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        return FileResponse(os.path.join("build", "index.html"))
